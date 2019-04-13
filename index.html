@@ -65,7 +65,7 @@ var DISCOVERY_URL =
 
   function setSigninStatus(isSignedIn) {
     var user = GoogleAuth.currentUser.get();
-    var isAuthorized = user.hasGrantedScopes(SCOPE);
+    var isAuthorized = user.hasGrantedScopes(SCOPES);
     if (isAuthorized) {
       $('#sign-in-or-out-button').html('Sign out');
       $('#revoke-access-button').css('display', 'inline-block');
