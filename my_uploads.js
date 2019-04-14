@@ -23,7 +23,7 @@ function requestUserUploadsPlaylistId() {
 function deleteVid() {
   return gapi.client.youtube.videos
     .delete({
-      id: $("#deleteInput").val();
+      id: $("#deleteInput").val()
     })
     .then(
       function(response) {
