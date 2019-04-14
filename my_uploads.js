@@ -35,6 +35,39 @@ function deleteVid() {
       }
     );
 }
+function updateVid() {
+  return gapi.client.youtube.videos
+    .update({
+      part: "snippet,status,localizations",
+      resource: {
+        id: $("#updateInput").val(),
+        snippet: {
+          categoryId: 22,
+          defaultLanguage: "en",
+          description: "This description is in English.",
+          title: "There is nothing to see here."
+        },
+        status: {
+          privacyStatus: "private"
+        },
+        localizations: {
+          es: {
+            title: "no hay nada a ver aqui",
+            description: "Esta descripcion es en español."
+          }
+        }
+      }
+    })
+    .then(
+      function(response) {
+        // Handle the results here (response.result has the parsed body).
+        console.log("Response", response);
+      },
+      function(err) {
+        console.error("Execute error", err);
+      }
+    );
+}
 // Retrieve the list of videos in the specified playlist.
 function requestVideoPlaylist(playlistId, pageToken) {
   $("#video-container").html("");
