@@ -20,7 +20,21 @@ function requestUserUploadsPlaylistId() {
     requestVideoPlaylist(playlistId);
   });
 }
-
+function deleteVid() {
+  return gapi.client.youtube.videos
+    .delete({
+      id: $("#deleteInput").val();
+    })
+    .then(
+      function(response) {
+        // Handle the results here (response.result has the parsed body).
+        console.log("Response", response);
+      },
+      function(err) {
+        console.error("Execute error", err);
+      }
+    );
+}
 // Retrieve the list of videos in the specified playlist.
 function requestVideoPlaylist(playlistId, pageToken) {
   $("#video-container").html("");
