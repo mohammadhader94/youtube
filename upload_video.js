@@ -98,7 +98,7 @@ UploadVideo.prototype.uploadFile = function(file) {
   var metadata = {
     snippet: {
       title: $("#title").val(),
-      description: $("#description").text(),
+      description: $("#description").val(),
       tags: this.tags,
       categoryId: this.categoryId
     },
