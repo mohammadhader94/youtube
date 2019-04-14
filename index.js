@@ -1,155 +1,58 @@
-import _ from "lodash";
-import React, { Component } from "react";
-import ReactDOM from "react-dom";
-import YTSearch from "youtube-api-search";
+// The client ID is obtained from the {{ Google Cloud Console }}
+// at {{ https://cloud.google.com/console }}.
+// If you run this code from a server other than http://localhost,
+// you need to register your own client ID.
+var OAUTH2_CLIENT_ID = '__YOUR_CLIENT_ID__';
+var OAUTH2_SCOPES = [
+  'https://www.googleapis.com/auth/youtube'
+];
 
-//Components
-import Search from "./components/Search";
-import VideoList from "./components/VideoList";
-import VideoDetail from "./components/VideoDetails";
+// Upon loading, the Google APIs JS client automatically invokes this callback.
+googleApiClientReady = function() {
+  gapi.auth.init(function() {
+    window.setTimeout(checkAuth, 1);
+  });
+}
 
-let GoogleAuth;
+// Attempt the immediate OAuth 2.0 client flow as soon as the page loads.
+// If the currently logged-in Google Account has previously authorized
+// the client specified as the OAUTH2_CLIENT_ID, then the authorization
+// succeeds with no user intervention. Otherwise, it fails and the
+// user interface that prompts for authorization needs to display.
+function checkAuth() {
+  gapi.auth.authorize({
+    client_id: OAUTH2_CLIENT_ID,
+    scope: OAUTH2_SCOPES,
+    immediate: true
+  }, handleAuthResult);
+}
 
-const API_KEY = "AIzaSyB_3zIpSArggwwgfWkOxc9yh9f4BQ3lWUY";
-const CLIENT_ID =
-  "1034925747541-po2gk9n45oi19mv23kidjts57u6446a0.apps.googleusercontent.com";
-const SCOPES =
-  "https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload";
-const DISCOVERY_URL =
-  "https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest";
-
-class App extends Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      videos: [],
-      selectedVideo: null
-    };
-    this.videoSearch("nails");
-    this.handleClientLoad();
-  }
-  handleClientLoad() {
-    // Load the API's client and auth2 modules.
-    // Call the initClient function after the modules load.
-    gapi.load("client:auth2", this.initClient());
-  }
-  initClient() {
-    console.log("111111111111");
-    gapi.client
-      .init({
-        apiKey: API_KEY,
-        clientId: CLIENT_ID,
-        scope: SCOPES,
-        discoveryDocs: DISCOVERY_URL
-      })
-      .then(function() {
-        console.log("22222222");
-
-        GoogleAuth = gapi.auth2.getAuthInstance();
-
-        // Listen for sign-in state changes.
-        GoogleAuth.isSignedIn.listen(this.updateSigninStatus());
-
-        // Handle initial sign-in state. (Determine if user is already signed in.)
-        const user = GoogleAuth.currentUser.get();
-        setSigninStatus();
-      });
-  }
-  handleAuthClick() {
-    if (GoogleAuth.isSignedIn.get()) {
-      // User is authorized and has clicked 'Sign out' button.
-      GoogleAuth.signOut();
-    } else {
-      // User is not signed in. Start Google auth flow.
-      GoogleAuth.signIn();
-    }
-  }
-
-  revokeAccess() {
-    GoogleAuth.disconnect();
-  }
-
-  setSigninStatus(isSignedIn) {
-    const user = GoogleAuth.currentUser.get();
-    const isAuthorized = user.hasGrantedScopes(SCOPES);
-    if (isAuthorized) {
-      console.log("AUTHORIZED");
-      console.log(
-        "You are currently signed in and have granted access to this app."
-      );
-    } else {
-      console.log("NOT AUTHORIZED");
-      console.log("You have not authorized this app or you are signed out.");
-    }
-  }
-
-  updateSigninStatus(isSignedIn) {
-    this.setSigninStatus();
-  }
-  videoSearch(term) {
-    YTSearch({ key: API_KEY, term: term }, videos => {
-      this.setState({
-        videos: videos,
-        selectedVideo: videos[0]
-      });
+// Handle the result of a gapi.auth.authorize() call.
+function handleAuthResult(authResult) {
+  if (authResult && !authResult.error) {
+    // Authorization was successful. Hide authorization prompts and show
+    // content that should be visible after authorization succeeds.
+    $('.pre-auth').hide();
+    $('.post-auth').show();
+    loadAPIClientInterfaces();
+  } else {
+    // Make the #login-link clickable. Attempt a non-immediate OAuth 2.0
+    // client flow. The current function is called when that flow completes.
+    $('#login-link').click(function() {
+      gapi.auth.authorize({
+        client_id: OAUTH2_CLIENT_ID,
+        scope: OAUTH2_SCOPES,
+        immediate: false
+        }, handleAuthResult);
     });
   }
-  render() {
-    const videoSearch = _.debounce(term => {
-      this.videoSearch(term);
-    }, 300);
-    return (
-      <div>
-        <div>
-          <button
-            id="sign-in-or-out-button"
-            onClick={() => {
-              this.handleAuthClick();
-            }}
-            style={signInStyle}
-          >
-            Sign In/Authorize
-          </button>
-          <button
-            id="revoke-access-button"
-            onClick={() => {
-              this.revokeAccess();
-            }}
-            style={provokeStyle}
-          >
-            Revoke access
-          </button>
-
-          <div id="auth-status" style={authStyle} />
-        </div>
-        <div className="row">
-          <div className="col-sm-12">
-            <Search onSearchTermChange={videoSearch} />
-          </div>
-          <div className="col-sm-12 col-lg-8">
-            <VideoDetail video={this.state.selectedVideo} />
-          </div>
-          <div className="col-sm-12 col-lg-4">
-            <VideoList
-              onVideoSelect={selectedVideo => this.setState({ selectedVideo })}
-              videos={this.state.videos}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
 }
-const signInStyle = {
-  marginLeft: "25px"
-};
-const provokeStyle = {
-  marginLeft: "25px",
-  display: "none"
-};
-const authStyle = {
-  paddingLeft: "25px",
-  display: "inline"
-};
-ReactDOM.render(<App />, document.querySelector(".container"));
+
+// Load the client interfaces for the YouTube Analytics and Data APIs, which
+// are required to use the Google APIs JS client. More info is available at
+// https://developers.google.com/api-client-library/javascript/dev/dev_jscript#loading-the-client-library-and-the-api
+function loadAPIClientInterfaces() {
+  gapi.client.load('youtube', 'v3', function() {
+    handleAPILoaded();
+  });
+}

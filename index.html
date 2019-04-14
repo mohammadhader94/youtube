@@ -1,8 +1,20 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <script>
-      var GoogleAuth;
+    <title>YouTube Data API Quickstart</title>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <p>YouTube Data API Quickstart</p>
+
+    <!--Add buttons to initiate auth sequence and sign out-->
+    <button id="authorize-button" style="display: none;">Authorize</button>
+    <button id="signout-button" style="display: none;">Sign Out</button>
+
+    <pre id="content"></pre>
+
+    <script type="text/javascript">
+      // Client ID and API key from the Developer Console
       var API_KEY = "AIzaSyB_3zIpSArggwwgfWkOxc9yh9f4BQ3lWUY";
       var CLIENT_ID =
         "1034925747541-po2gk9n45oi19mv23kidjts57u6446a0.apps.googleusercontent.com";
@@ -10,110 +22,98 @@
         "https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload";
       var DISCOVERY_URL =
         "https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest";
+      var authorizeButton = document.getElementById("authorize-button");
+      var signoutButton = document.getElementById("signout-button");
+      /**
+       *  On load, called to load the auth2 library and API client library.
+       */
       function handleClientLoad() {
-        // Load the API's client and auth2 modules.
-        // Call the initClient function after the modules load.
         gapi.load("client:auth2", initClient);
       }
-
+      /**
+       *  Initializes the API client library and sets up sign-in state
+       *  listeners.
+       */
       function initClient() {
-        // Retrieve the discovery document for version 3 of YouTube Data API.
-        // In practice, your app can retrieve one or more discovery documents.
-
-        // Initialize the gapi.client object, which app uses to make API requests.
-        // Get API key and client ID from API Console.
-        // 'scope' field specifies space-delimited list of access scopes.
         gapi.client
           .init({
             apiKey: API_KEY,
-            discoveryDocs: [DISCOVERY_URL],
+            discoveryDocs: DISCOVERY_URL,
             clientId: CLIENT_ID,
             scope: SCOPES
           })
           .then(function() {
-            GoogleAuth = gapi.auth2.getAuthInstance();
-
             // Listen for sign-in state changes.
-            GoogleAuth.isSignedIn.listen(updateSigninStatus);
-
-            // Handle initial sign-in state. (Determine if user is already signed in.)
-            var user = GoogleAuth.currentUser.get();
-            setSigninStatus();
-
-            // Call handleAuthClick function when user clicks on
-            //      "Sign In/Authorize" button.
-            $("#sign-in-or-out-button").click(function() {
-              handleAuthClick();
-            });
-            $("#revoke-access-button").click(function() {
-              revokeAccess();
-            });
+            gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+            // Handle the initial sign-in state.
+            updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+            authorizeButton.onclick = handleAuthClick;
+            signoutButton.onclick = handleSignoutClick;
           });
       }
-
-      function handleAuthClick() {
-        if (GoogleAuth.isSignedIn.get()) {
-          // User is authorized and has clicked 'Sign out' button.
-          GoogleAuth.signOut();
-        } else {
-          // User is not signed in. Start Google auth flow.
-          GoogleAuth.signIn();
-        }
-      }
-
-      function revokeAccess() {
-        GoogleAuth.disconnect();
-      }
-
-      function setSigninStatus(isSignedIn) {
-        var user = GoogleAuth.currentUser.get();
-        var isAuthorized = user.hasGrantedScopes(SCOPES);
-        if (isAuthorized) {
-          $("#sign-in-or-out-button").html("Sign out");
-          $("#revoke-access-button").css("display", "inline-block");
-          $("#auth-status").html(
-            "You are currently signed in and have granted " +
-              "access to this app."
-          );
-        } else {
-          $("#sign-in-or-out-button").html("Sign In/Authorize");
-          $("#revoke-access-button").css("display", "none");
-          $("#auth-status").html(
-            "You have not authorized this app or you are " + "signed out."
-          );
-        }
-      }
-
+      /**
+       *  Called when the signed in status changes, to update the UI
+       *  appropriately. After a sign-in, the API is called.
+       */
       function updateSigninStatus(isSignedIn) {
-        setSigninStatus();
+        if (isSignedIn) {
+          authorizeButton.style.display = "none";
+          signoutButton.style.display = "block";
+          getChannel();
+        } else {
+          authorizeButton.style.display = "block";
+          signoutButton.style.display = "none";
+        }
+      }
+      /**
+       *  Sign in the user upon button click.
+       */
+      function handleAuthClick(event) {
+        gapi.auth2.getAuthInstance().signIn();
+      }
+      /**
+       *  Sign out the user upon button click.
+       */
+      function handleSignoutClick(event) {
+        gapi.auth2.getAuthInstance().signOut();
+      }
+      /**
+       * Append text to a pre element in the body, adding the given message
+       * to a text node in that element. Used to display info from API response.
+       *
+       * @param {string} message Text to be placed in pre element.
+       */
+      function appendPre(message) {
+        var pre = document.getElementById("content");
+        var textContent = document.createTextNode(message + "\n");
+        pre.appendChild(textContent);
+      }
+      /**
+       * Print files.
+       */
+      function getChannel() {
+        gapi.client.youtube.channels
+          .list({
+            part: "snippet,contentDetails,statistics",
+            forUsername: "GoogleDevelopers"
+          })
+          .then(function(response) {
+            var channel = response.result.items[0];
+            appendPre(
+              "This channel's ID is " +
+                channel.id +
+                ". " +
+                "Its title is '" +
+                channel.snippet.title +
+                ", " +
+                "and it has " +
+                channel.statistics.viewCount +
+                " views."
+            );
+          });
       }
     </script>
-    <link
-      href="https://unpkg.com/filepond/dist/filepond.css"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <button id="sign-in-or-out-button" style="margin-left: 25px">
-      Sign In/Authorize
-    </button>
-    <button id="revoke-access-button" style="display: none; margin-left: 25px">
-      Revoke access
-    </button>
 
-    <div id="auth-status" style="display: inline; padding-left: 25px"></div>
-    <hr />
-
-    <input type="file" class="filepond" />
-
-    <!-- Load FilePond library -->
-    <script src="https://unpkg.com/filepond/dist/filepond.js"></script>
-
-    <!-- Turn all file input elements into ponds -->
-    <script>
-      FilePond.parse(document.body);
-    </script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script
       async
       defer
